@@ -1,0 +1,317 @@
+{
+  "name": "Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "Vui lòng chờ trong giây lát...",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        140,
+        -80
+      ],
+      "id": "7bb33507-359c-43d5-9c93-39733263edda",
+      "name": "Vui lòng đợi",
+      "webhookId": "f53a180a-ed59-402c-bc13-95eec2d47e95",
+      "credentials": {
+        "telegramApi": {
+          "id": "v9dKp9icSjWtBeHl",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://m.media-amazon.com/images/I/51oWx8Vdg6L._AC_UY1100_.jpg",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        360,
+        -80
+      ],
+      "id": "d52252bc-50a4-4e00-ab40-f6aa6571ef65",
+      "name": "Download_product"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/upload/v1beta/files?key=AIzaSyCod9Px-sa-8QiETUoyHhOOIcgWL7QEIAg",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Length",
+              "value": "={{ $json.headers['content-length'] }}"
+            },
+            {
+              "name": "X-Goog-Upload-Offset",
+              "value": "0"
+            },
+            {
+              "name": "X-Goog-Upload-Command",
+              "value": "upload, finalize"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        580,
+        -80
+      ],
+      "id": "eff43aab-72ae-4b06-89f7-53ab4490c987",
+      "name": "Upload_product"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "download": true
+        }
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -100,
+        -80
+      ],
+      "id": "fab2aabb-df35-491c-925a-b12e90ed04c1",
+      "name": "Tele_pic",
+      "webhookId": "9fb34943-d793-4b66-9e11-0a07d0f7d18e",
+      "credentials": {
+        "telegramApi": {
+          "id": "v9dKp9icSjWtBeHl",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return {\n  json: {},\n  binary: $(\"Tele_pic\").item.binary\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        -80
+      ],
+      "id": "244b5afa-a70c-44f4-9ac4-ce59ae1fabcf",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/upload/v1beta/files?key=AIzaSyCod9Px-sa-8QiETUoyHhOOIcgWL7QEIAg",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Length",
+              "value": "={{ $('Tele_pic').item.json.message.photo[2].file_size }}"
+            },
+            {
+              "name": "X-Goog-Upload-Offset",
+              "value": "0"
+            },
+            {
+              "name": "X-Goog-Upload-Command",
+              "value": "upload, finalize"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1020,
+        -80
+      ],
+      "id": "c2367453-7eb4-4e9b-9ef8-cea254625563",
+      "name": "Upload_person"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=AIzaSyCod9Px-sa-8QiETUoyHhOOIcgWL7QEIAg",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"contents\": [\n        {\n            \"role\": \"user\",\n            \"parts\": [\n                {\n                    \"fileData\": {\n                        \"mimeType\":\"{{ $('Upload_product').item.json.file.mimeType }}\",\n                        \"fileUri\": \"{{ $('Upload_product').item.json.file.uri }}\"\n                    }\n                },\n                {\n                    \"fileData\": {\n                        \"mimeType\": \"{{ $json.file.mimeType }}\",\n                        \"fileUri\": \"{{ $json.file.uri }}\"\n                    }\n                },\n                {\n                    \"text\": \"Please transfer the eyeglasses from the first image onto the person's face in the second image. Keep the original style, size, and color of the glasses. Make sure the glasses are placed naturally and aligned properly with the face in the second image. Do not cover person's eyes except sunglasses. Only return image.\"\n                }\n            ]\n        }\n    ],\n    \"generationConfig\": {\n        \"responseModalities\": [\n            \"IMAGE\",\"TEXT\"\n        ],\n        \"responseMimeType\": \"text/plain\"\n    }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1240,
+        -80
+      ],
+      "id": "d2df72de-c59d-4732-b559-da6cf5d89036",
+      "name": "Gen ảnh"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "candidates[0].content.parts[0].inlineData.data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1460,
+        -80
+      ],
+      "id": "f11d88b2-b727-443b-baa0-5f17b1b81ee8",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "={{ $('Tele_pic').item.json.message.chat.id }}",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "Xin mời quý khách trải nghiệm thử sản phẩm. Hi vọng quý khách hài lòng!"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        -80
+      ],
+      "id": "72a42195-2cb3-451b-9867-6c8c531c8006",
+      "name": "Telegram",
+      "webhookId": "05d16e93-8f78-40d3-811c-b25769463887",
+      "credentials": {
+        "telegramApi": {
+          "id": "v9dKp9icSjWtBeHl",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Vui lòng đợi": {
+      "main": [
+        [
+          {
+            "node": "Download_product",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download_product": {
+      "main": [
+        [
+          {
+            "node": "Upload_product",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tele_pic": {
+      "main": [
+        [
+          {
+            "node": "Vui lòng đợi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload_product": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Upload_person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload_person": {
+      "main": [
+        [
+          {
+            "node": "Gen ảnh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gen ảnh": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "83374f18-faee-47c7-bac3-ff6f63ca923e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c4397ad13dbc3b52a10d5acc56d504021088583c2ddb1cb6455b76ac3b2a667c"
+  },
+  "id": "nlKY1jyaipfnDHE1",
+  "tags": []
+}
